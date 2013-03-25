@@ -2078,10 +2078,8 @@ void CBaseGame :: EventPlayerJoined( CPotentialPlayer *potential, CIncomingJoinP
 		SendAllChat( "Owner [" + joinPlayer->GetName( ) + "] has joined from [" + ( JoinedRealm == string( ) ? "LAN" : JoinedRealm ) + "]" );
 	}
 	else {
-		// UTIL_ToString( joinPlayer->GetScore( ), 2 )
 		SendAllChat( "Player [" + joinPlayer->GetName( ) + "] has joined from [" + ( JoinedRealm == string( ) ? "LAN" : JoinedRealm ) + "]" );
 	}
-	m_PairedGPSChecks.push_back( PairedGPSCheck( string( ), m_GHost->m_DB->ThreadedGamePlayerSummaryCheck( joinPlayer->GetName( ) ) ) );
 	/* join message end */
 	
 	// check for multiple IP usage
