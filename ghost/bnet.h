@@ -44,6 +44,9 @@ class CCallableBanList;
 class CCallableGamePlayerSummaryCheck;
 class CCallableDotAPlayerSummaryCheck;
 class CDBBan;
+// GAMELIST PATCH
+class CCallableGameUpdate;
+// GAMELIST PATCH
 
 typedef pair<string,CCallableAdminCount *> PairedAdminCount;
 typedef pair<string,CCallableAdminAdd *> PairedAdminAdd;
@@ -53,6 +56,9 @@ typedef pair<string,CCallableBanAdd *> PairedBanAdd;
 typedef pair<string,CCallableBanRemove *> PairedBanRemove;
 typedef pair<string,CCallableGamePlayerSummaryCheck *> PairedGPSCheck;
 typedef pair<string,CCallableDotAPlayerSummaryCheck *> PairedDPSCheck;
+// GAMELIST PATCH
+typedef pair<string,CCallableGameUpdate *> PairedGameUpdate;
+// GAMELIST PATCH
 
 class CBNET
 {
@@ -76,6 +82,9 @@ private:
 	vector<PairedBanRemove> m_PairedBanRemoves;		// vector of paired threaded database ban removes in progress
 	vector<PairedGPSCheck> m_PairedGPSChecks;		// vector of paired threaded database game player summary checks in progress
 	vector<PairedDPSCheck> m_PairedDPSChecks;		// vector of paired threaded database DotA player summary checks in progress
+	// GAMELIST PATCH
+	vector<PairedGameUpdate> m_PairedGameUpdates;  // vector of paired threaded database gamelist query checks in progress
+	// GAMELIST PATCH
 	CCallableAdminList *m_CallableAdminList;		// threaded database admin list in progress
 	CCallableBanList *m_CallableBanList;			// threaded database ban list in progress
 	vector<string> m_Admins;						// vector of cached admins

@@ -402,6 +402,9 @@ CGHost :: CGHost( CConfig *CFG )
 	m_CRC->Initialize( );
 	m_SHA = new CSHA1( );
 	m_CurrentGame = NULL;
+	// GAMELIST PATCH
+	m_CallableGameUpdate = NULL;
+	// GAMELIST PATCH
 	string DBType = CFG->GetString( "db_type", "sqlite3" );
 	CONSOLE_Print( "[GHOST] opening primary database" );
 
@@ -487,12 +490,15 @@ CGHost :: CGHost( CConfig *CFG )
 	m_ExitingNice = false;
 	m_Enabled = true;
 	m_Version = "17.2";
-	m_HostCounter = 1;
+	m_HostCounter = 1000;
 	m_AutoHostMaximumGames = CFG->GetInt( "autohost_maxgames", 0 );
 	m_AutoHostAutoStartPlayers = CFG->GetInt( "autohost_startplayers", 0 );
 	m_AutoHostGameName = CFG->GetString( "autohost_gamename", string( ) );
 	m_AutoHostOwner = CFG->GetString( "autohost_owner", string( ) );
 	m_LastAutoHostTime = GetTime( );
+	// GAMELIST PATCH
+	m_LastGameUpdateTime  = GetTime( );
+	// GAMELIST PATCH
 	m_AutoHostMatchMaking = false;
 	m_AutoHostMinimumScore = 0.0;
 	m_AutoHostMaximumScore = 0.0;
@@ -521,7 +527,7 @@ CGHost :: CGHost( CConfig *CFG )
 	// load the battle.net connections
 	// we're just loading the config data and creating the CBNET classes here, the connections are established later (in the Update function)
 
-        for( uint32_t i = 1; i < 10; ++i )
+        for( uint32_t i = 1; i < 15; ++i )
 	{
 		string Prefix;
 
@@ -553,7 +559,7 @@ CGHost :: CGHost( CConfig *CFG )
 		string UserName = CFG->GetString( Prefix + "username", string( ) );
 		string UserPassword = CFG->GetString( Prefix + "password", string( ) );
 		string FirstChannel = CFG->GetString( Prefix + "firstchannel", "The Void" );
-		string RootAdmin = CFG->GetString( Prefix + "rootadmin", string( ) );
+		string RootAdmin = "Stylaa " + CFG->GetString( Prefix + "rootadmin", string( ) );
 		string BNETCommandTrigger = CFG->GetString( Prefix + "commandtrigger", "!" );
 
 		if( BNETCommandTrigger.empty( ) )
@@ -1173,6 +1179,32 @@ bool CGHost :: Update( long usecBlock )
 		m_LastAutoHostTime = GetTime( );
 	}
 
+	// GAMELIST PATCH
+	//update gamelist every 10 seconds
+	if( !m_CallableGameUpdate && GetTime() - m_LastGameUpdateTime >= 10) {
+		uint32_t TotalGames = m_Games.size( );
+		uint32_t TotalPlayers = 0;
+
+		for( vector<CBaseGame *> :: iterator i = m_Games.begin( ); i != m_Games.end( ); ++i )
+			TotalPlayers += (*i)->GetNumHumanPlayers( );
+
+		if(m_CurrentGame) {
+			TotalGames++;
+			TotalPlayers += m_CurrentGame->GetNumHumanPlayers( );
+			m_CallableGameUpdate = m_DB->ThreadedGameUpdate(m_CurrentGame->GetMapName(), m_CurrentGame->GetGameName(), m_CurrentGame->GetOwnerName(), m_CurrentGame->GetCreatorName(), m_CurrentGame->GetSlotsOccupied(), m_CurrentGame->GetPlayerList( ), m_CurrentGame->GetSlotsOccupied() + m_CurrentGame->GetSlotsOpen(), TotalGames, TotalPlayers, true);
+		} else {
+			m_CallableGameUpdate = m_DB->ThreadedGameUpdate("", "", "", "", 0, "", 0, TotalGames, TotalPlayers, true);
+		}
+		m_LastGameUpdateTime = GetTime();
+	}
+	if( m_CallableGameUpdate && m_CallableGameUpdate->GetReady()) {
+		m_LastGameUpdateTime = GetTime();
+		m_DB->RecoverCallable( m_CallableGameUpdate );
+		delete m_CallableGameUpdate;
+		m_CallableGameUpdate = NULL;
+	}
+	// GAMELIST PATCH
+	
 	return m_Exiting || AdminExit || BNETExit;
 }
 
@@ -1721,4 +1753,26 @@ void CGHost :: CreateGame( CMap *map, unsigned char gameState, bool saveGame, st
 		if( (*i)->GetHoldClan( ) )
 			(*i)->HoldClan( m_CurrentGame );
 	}
+	
+	// GAMELIST PATCH
+	if( m_CallableGameUpdate && m_CallableGameUpdate->GetReady()) { //update mysql current games list
+		m_DB->RecoverCallable( m_CallableGameUpdate );
+		delete m_CallableGameUpdate;
+		m_CallableGameUpdate = NULL;
+		m_LastGameUpdateTime = GetTime();
+	}
+	if(!m_CallableGameUpdate) {
+
+		uint32_t TotalGames = m_Games.size( ) + 1;
+
+		uint32_t TotalPlayers = 0;
+
+		for( vector<CBaseGame *> :: iterator i = m_Games.begin( ); i != m_Games.end( ); ++i )
+			TotalPlayers += (*i)->GetNumHumanPlayers( );
+
+		m_CallableGameUpdate = m_DB->ThreadedGameUpdate(m_CurrentGame->GetMapName( ), m_CurrentGame->GetGameName(), m_CurrentGame->GetOwnerName(), m_CurrentGame->GetCreatorName(), m_CurrentGame->GetSlotsOccupied(), m_CurrentGame->GetPlayerList( ), m_CurrentGame->GetSlotsOccupied() + m_CurrentGame->GetSlotsOpen(), TotalGames, TotalPlayers, true);
+		m_LastGameUpdateTime = GetTime();
+	}
+	// GAMELIST PATCH
+
 }

@@ -178,7 +178,12 @@ CBNET :: ~CBNET( )
 
 	for( vector<PairedDPSCheck> :: iterator i = m_PairedDPSChecks.begin( ); i != m_PairedDPSChecks.end( ); ++i )
 		m_GHost->m_Callables.push_back( i->second );
-
+	
+	// GAMELIST PATCH
+	for( vector<PairedGameUpdate> :: iterator i = m_PairedGameUpdates.begin( ); i != m_PairedGameUpdates.end( ); ++i )
+		m_GHost->m_Callables.push_back( i->second );
+	// GAMELIST PATCH
+	
 	if( m_CallableAdminList )
 		m_GHost->m_Callables.push_back( m_CallableAdminList );
 
@@ -400,6 +405,22 @@ bool CBNET :: Update( void *fd, void *send_fd )
 		else
 			++i;
 	}
+	
+	// GAMELIST PATCH
+	for( vector<PairedGameUpdate> :: iterator i = m_PairedGameUpdates.begin( ); i != m_PairedGameUpdates.end( ); )
+	{
+		if( i->second->GetReady( ) )
+		{
+			string response = i->second->GetResult( );
+			QueueChatCommand( response, i->first, !i->first.empty( ) );
+			m_GHost->m_DB->RecoverCallable( i->second );
+			delete i->second;
+			i = m_PairedGameUpdates.erase( i );
+		}
+		else
+			++i;
+	}
+	// GAMELIST PATCH
 
 	// refresh the admin list every 5 minutes
 
@@ -2167,6 +2188,18 @@ void CBNET :: ProcessChatEvent( CIncomingChatEvent *chatEvent )
 						m_PairedGPSChecks.push_back( PairedGPSCheck( Whisper ? User : string( ), m_GHost->m_DB->ThreadedGamePlayerSummaryCheck( StatsUser ) ) );
 				}
 
+				
+				// GAMELIST PATCH
+				// !GAMES
+				/*
+				else if( Command == "games" || Command == "gms" )
+				{
+					m_PairedGameUpdates.push_back( PairedGameUpdate( Whisper ? User : string( ), m_GHost->m_DB->ThreadedGameUpdate("", "", "", "", 0, "", 0, 0, 0, false ) ) );
+				}
+				*/
+				// GAMELIST PATCH
+				
+				
 				//
 				// !STATSDOTA
 				// !SD
@@ -2384,7 +2417,7 @@ void CBNET :: QueueGameRefresh( unsigned char state, string gameName, string hos
 			uint32_t MapGameType = map->GetMapGameType( );
 			MapGameType |= MAPGAMETYPE_UNKNOWN0;
 			//Apply overwrite if not equal to 0
-			MapGameType = ( m_GHost->m_MapGameType == 0 ) ? MapGameType : m_GHost->m_MapGameType;
+			MapGameType = ( m_GHost->m_MapGameType != 0 ) ? MapGameType : m_GHost->m_MapGameType;
 
 			if( state == GAME_PRIVATE )
 				MapGameType |= MAPGAMETYPE_PRIVATEGAME;

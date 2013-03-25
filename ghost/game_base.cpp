@@ -208,6 +208,13 @@ uint32_t CBaseGame :: GetNextTimedActionTicks( )
 		return m_Latency - m_LastActionLateBy - TicksSinceLastUpdate;
 }
 
+// GAMELIST PATCH
+string CBaseGame :: GetMapName( )
+{
+	return m_Map->GetMapPath();
+}
+// GAMELIST PATCH
+
 uint32_t CBaseGame :: GetSlotsOccupied( )
 {
 	uint32_t NumSlotsOccupied = 0;
@@ -1413,7 +1420,8 @@ void CBaseGame :: EventPlayerDeleted( CGamePlayer *player )
 		return;
 
 	if( m_GameLoaded )
-		SendAllChat( player->GetName( ) + " " + player->GetLeftReason( ) + "." );
+		SendAllChat( player->GetName( ) + " " + player->GetLeftReason( ) + " (" + player->GetJoinedRealm( ) + ")." );
+		//SendAllChat( player->GetName( ) + " " + player->GetLeftReason( ) + "." );
 
 	if( player->GetLagging( ) )
 		SendAll( m_Protocol->SEND_W3GS_STOP_LAG( player ) );
@@ -3521,6 +3529,146 @@ CGamePlayer *CBaseGame :: GetPlayerFromColour( unsigned char colour )
 
 	return NULL;
 }
+
+// GAMELIST PATCH
+/*
+string CBaseGame :: GetPlayerList( )
+{
+	string players = "";
+
+	for( unsigned char i = 0; i < m_Slots.size( ); ++i )
+	{
+		if( m_Slots[i].GetSlotStatus( ) == SLOTSTATUS_OCCUPIED && m_Slots[i].GetComputer( ) == 0 )
+		{
+			CGamePlayer *player = GetPlayerFromSID( i );
+
+			if( player )
+				players += player->GetName( ) + "\t" + player->GetSpoofedRealm( ) + "\t" + UTIL_ToString( player->GetPing( m_GHost->m_LCPings ) ) + "\t";
+		}
+		else if( m_Slots[i].GetSlotStatus( ) == SLOTSTATUS_OPEN )
+		players += "\t\t\t";
+	}
+	return players;
+}
+*/
+
+string CBaseGame :: GetPlayerList( )
+{
+	string players = "[";
+
+	for( unsigned char i = 0; i < m_Slots.size( ); ++i )
+	{
+		players += "{\"slot_id\":\"" + UTIL_ToString( i ) + "\"";
+		
+		if ( m_Slots[i].GetSlotStatus( ) == SLOTSTATUS_OPEN )
+		{
+			players += ",\"slot_status\":\"open\"";
+		}
+		if ( m_Slots[i].GetSlotStatus( ) == SLOTSTATUS_CLOSED )
+		{
+			players += ",\"slot_status\":\"closed\"";
+		}
+		if ( m_Slots[i].GetSlotStatus( ) == SLOTSTATUS_OCCUPIED )
+		{
+			players += ",\"slot_status\":\"occupied\"";
+		}
+		
+		players += ",\"slot_downloadstatus\":\"" + UTIL_ToString( m_Slots[i].GetDownloadStatus( ) ) + "\"";
+		players += ",\"slot_team\":\"" + UTIL_ToString( m_Slots[i].GetTeam( ) ) + "\"";
+		players += ",\"slot_colour\":\"" + UTIL_ToString( m_Slots[i].GetColour( ) ) + "\"";
+		players += ",\"slot_handicap\":\"" + UTIL_ToString( m_Slots[i].GetHandicap( ) ) + "\"";
+		
+		if ( m_Slots[i].GetComputer( ) == 1 )
+		{
+			players += ",\"slot_computer\":\"true\"";
+		}
+		if ( m_Slots[i].GetComputer( ) == 0 )
+		{
+			players += ",\"slot_computer\":\"false\"";
+		}
+		
+		if ( m_Slots[i].GetComputerType( ) == 0 )
+		{
+			players += ",\"slot_computer_level\":\"easy\"";
+		}
+		if ( m_Slots[i].GetComputerType( ) == 1 )
+		{
+			players += ",\"slot_computer_level\":\"normal\"";
+		}
+		if ( m_Slots[i].GetComputerType( ) == 2 )
+		{
+			players += ",\"slot_computer_level\":\"hard\"";
+		}
+		
+		if ( m_Slots[i].GetRace( ) == 1 )
+		{
+			players += ",\"slot_race\":\"human\"";
+		}
+		if ( m_Slots[i].GetRace( ) == 2 )
+		{
+			players += ",\"slot_race\":\"orc\"";
+		}
+		if ( m_Slots[i].GetRace( ) == 4 )
+		{
+			players += ",\"slot_race\":\"nightelf\"";
+		}
+		if ( m_Slots[i].GetRace( ) == 8 )
+		{
+			players += ",\"slot_race\":\"undead\"";
+		}
+		if ( m_Slots[i].GetRace( ) == 32 )
+		{
+			players += ",\"slot_race\":\"random\"";
+		}
+		if ( m_Slots[i].GetRace( ) == 64 )
+		{
+			players += ",\"slot_race\":\"selectable\"";
+		}
+		
+		if( m_Slots[i].GetSlotStatus( ) == SLOTSTATUS_OCCUPIED && m_Slots[i].GetComputer( ) == 0 )
+		{
+			CGamePlayer *player = GetPlayerFromSID( i );
+			if( player )
+			{
+				if ( player->GetMuted( ) == true ) {
+					players += ",\"slot_player_muted\":\"true\"";
+				} else {
+					players += ",\"slot_player_muted\":\"false\"";
+				}
+				players += ",\"slot_player_name\":\"" + player->GetName( ) + "\"";
+				players += ",\"slot_player_realm\":\"" + player->GetSpoofedRealm( ) + "\"";
+				players += ",\"slot_player_ping\":\"" + UTIL_ToString( player->GetPing( m_GHost->m_LCPings ) ) + "\"";
+				players += ",\"slot_player_ip\":\"" + player->GetExternalIPString( ) + "\"";
+				
+			} else {
+				players += ",\"slot_player_muted\":\"false\"";
+				players += ",\"slot_player_name\":\"computer\"";
+				players += ",\"slot_player_realm\":\"local\"";
+				players += ",\"slot_player_ping\":\"0\"";
+				players += ",\"slot_player_ip\":\"127.0.0.1\"";
+			}
+		} else {
+			players += ",\"slot_player_muted\":\"false\"";
+			players += ",\"slot_player_name\":\"computer\"";
+			players += ",\"slot_player_realm\":\"local\"";
+			players += ",\"slot_player_ping\":\"0\"";
+			players += ",\"slot_player_ip\":\"127.0.0.1\"";
+		}
+		
+		if ( i < m_Slots.size( ) - 1 ) {
+			players += "},";
+		} else {
+			players += "}";
+		}
+		
+	}
+
+	players += "]";
+	
+	return players;
+}
+
+// GAMELIST PATCH
 
 unsigned char CBaseGame :: GetNewPID( )
 {
