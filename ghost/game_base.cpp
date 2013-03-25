@@ -2049,6 +2049,39 @@ void CBaseGame :: EventPlayerJoined( CPotentialPlayer *potential, CIncomingJoinP
 		}
 	}
 
+	/* Check if User is Rootadmin | Admin |  Owner and display in the join message*/
+	bool Player_IsAdmin = false;
+	bool Player_IsRootAdmin = false;
+	// Foreach Battle.net Server
+    for( vector<CBNET *> :: iterator i = m_GHost->m_BNETs.begin( ); i != m_GHost->m_BNETs.end( ); ++i )
+	{
+		// if Player is RootAdmin
+		if( (*i)->IsRootAdmin( joinPlayer->GetName( ) ) )
+		{
+			Player_IsRootAdmin = true;
+			break;
+		}
+		// if Player is Admin
+		if( (*i)->IsAdmin( joinPlayer->GetName( ) ) )
+		{
+			Player_IsAdmin = true;
+			break;
+		}
+	}
+	if( Player_IsRootAdmin ) {
+		SendAllChat( "Rootadmin [" + joinPlayer->GetName( ) + "] has joined from [" + ( JoinedRealm == string( ) ? "LAN" : JoinedRealm ) + "]" );
+	}
+	else if( Player_IsAdmin ) {
+		SendAllChat( "Admin [" + joinPlayer->GetName( ) + "] has joined from [" + ( JoinedRealm == string( ) ? "LAN" : JoinedRealm ) + "]" );
+	}
+	else if( IsOwner( joinPlayer->GetName( ) ) ) {
+		SendAllChat( "Owner [" + joinPlayer->GetName( ) + "] has joined from [" + ( JoinedRealm == string( ) ? "LAN" : JoinedRealm ) + "]" );
+	}
+	else {
+		SendAllChat( "Player [" + joinPlayer->GetName( ) + "] has joined from [" + ( JoinedRealm == string( ) ? "LAN" : JoinedRealm ) + "]" );
+	}
+	/* join message end */
+	
 	// check for multiple IP usage
 
 	if( m_GHost->m_CheckMultipleIPUsage )
